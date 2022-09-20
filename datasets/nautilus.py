@@ -1,14 +1,20 @@
 from pathlib import Path
 from PIL import Image
-
-import tensorflow as tf
+import os
 import torch
 import torch.utils.data
 import torchvision
 import typing
-from .tf_utils import parse_record
-
 import torchvision.transforms as T
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+import tensorflow as tf
+try:
+    from .tf_utils import parse_record
+except:
+    from tf_utils import parse_record
+
 # import datasets.transforms as T
 
 from tqdm import tqdm
@@ -70,15 +76,15 @@ class NautilusDataset(torch.utils.data.Dataset):
 
     def get_targets(self, record_data):
         width, height = record_data.width, record_data.height
-        boxes = torch.Tensor(record_data.boxes)
+        boxes = torch.tensor(record_data.boxes)
         target = {
             "boxes": boxes,
-            "labels": torch.Tensor(record_data.labels),
-            "area": torch.Tensor([
+            "labels": torch.tensor(record_data.labels, dtype=torch.int64),
+            "area": torch.tensor([
                 (b[2] * width * b[3] * height) for b in boxes
-            ]),
-            "orig_size": torch.as_tensor([int(height), int(width)]),
-            "size": torch.as_tensor(self._input_size)
+            ], dtype=torch.float32),
+            "orig_size": torch.as_tensor([int(height), int(width)], dtype=torch.int64),
+            "size": torch.as_tensor(self._input_size, dtype=torch.int64)
         }
         return target
 
@@ -100,3 +106,7 @@ def build(image_set, args):
     }
     dataset = NautilusDataset(tfrecord_path=PATHS[image_set])
     return dataset
+
+if __name__=='__main__':
+    nd = NautilusDataset("/mnt/storage/2021-09-24-its/train.tfrecord")
+    breakpoint()
