@@ -37,11 +37,12 @@ class NautilusDataset(torch.utils.data.Dataset):
 
         self.get_new_buffer()
 
+
     def get_default_transforms(self):
         normalize = T.Compose([
             T.ToTensor(),
             T.Normalize([0., 0., 0.], [1.0, 1.0, 1.0])
-            ])
+        ])
             
         if self._is_train:
             return T.Compose([
