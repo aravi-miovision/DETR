@@ -6,7 +6,7 @@ import torch
 import torch.utils.data
 import torchvision
 import typing
-import tf_utils
+from .tf_utils import parse_record
 
 import torchvision.transforms as T
 # import datasets.transforms as T
@@ -59,7 +59,7 @@ class NautilusDataset(torch.utils.data.Dataset):
             except:
                 self._dataset_iter = iter(self._dataset)
                 record = next(self._dataset_iter)
-            record_data = tf_utils.parse_record(record)
+            record_data = parse_record(record)
             img = self.get_image(record_data)
             img = self._transforms(img)
             target = self.get_targets(record_data)
@@ -74,11 +74,9 @@ class NautilusDataset(torch.utils.data.Dataset):
         target = {
             "boxes": boxes,
             "labels": torch.Tensor(record_data.labels),
-            "image_id": None,
             "area": torch.Tensor([
                 (b[2] * width * b[3] * height) for b in boxes
             ]),
-            "iscrowd": False,
             "orig_size": torch.as_tensor([int(height), int(width)]),
             "size": torch.as_tensor(self._input_size)
         }
