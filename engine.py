@@ -25,9 +25,11 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
     print_freq = 10
 
-    for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
+    run_count = 0
+    for samples, org_targets in metric_logger.log_every(data_loader, print_freq, header):
+        run_count += 1
         samples = samples.to(device)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        targets = [{k: v.to(device) for k, v in t.items()} for t in org_targets]
 
         outputs = model(samples)
         loss_dict = criterion(outputs, targets)
@@ -58,6 +60,14 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         metric_logger.update(loss=loss_value, **loss_dict_reduced_scaled, **loss_dict_reduced_unscaled)
         metric_logger.update(class_error=loss_dict_reduced['class_error'])
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+
+        if run_count % 5000 == 0:
+            print("\n"*2, f"SAVED MODEL E: {epoch} Step: {run_count}", "\n"*2)
+            utils.save_on_master({
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'epoch': epoch,
+            }, "new_model.pth")
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)

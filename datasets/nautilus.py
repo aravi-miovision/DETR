@@ -7,7 +7,6 @@ import torchvision
 import typing
 import torchvision.transforms as T
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import tensorflow as tf
 try:
@@ -17,16 +16,14 @@ except:
 
 # import datasets.transforms as T
 
-from tqdm import tqdm
-
 class NautilusDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         tfrecord_path: str,
         transforms: typing.Optional[typing.Callable] = None,
         is_train: bool = True,
-        input_size: tuple = (300, 300),
-        buffer_size: int = 512
+        input_size: tuple = (384, 600),
+        buffer_size: int = 1024
     ):
         super(NautilusDataset, self).__init__()
         self._tfrecord_path = tfrecord_path
@@ -59,7 +56,7 @@ class NautilusDataset(torch.utils.data.Dataset):
     def get_new_buffer(self):
         self._read_count = 0
         self._buffer = list()
-        for i in tqdm(range(self._buffer_size)):
+        for i in range(self._buffer_size):
             try:
                 record = next(self._dataset_iter)
             except:
@@ -69,6 +66,8 @@ class NautilusDataset(torch.utils.data.Dataset):
             img = self.get_image(record_data)
             img = self._transforms(img)
             target = self.get_targets(record_data)
+            if target["boxes"].nelement() == 0:
+                continue
             self._buffer.append((img, target))
 
     def get_image(self, record_data):
@@ -79,12 +78,12 @@ class NautilusDataset(torch.utils.data.Dataset):
         boxes = torch.tensor(record_data.boxes)
         target = {
             "boxes": boxes,
-            "labels": torch.tensor(record_data.labels, dtype=torch.int64),
+            "labels": torch.tensor(record_data.labels),
             "area": torch.tensor([
                 (b[2] * width * b[3] * height) for b in boxes
-            ], dtype=torch.float32),
-            "orig_size": torch.as_tensor([int(height), int(width)], dtype=torch.int64),
-            "size": torch.as_tensor(self._input_size, dtype=torch.int64)
+            ]),
+            "orig_size": torch.as_tensor([int(height), int(width)]),
+            "size": torch.as_tensor(self._input_size)
         }
         return target
 
@@ -93,9 +92,9 @@ class NautilusDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         self._read_count += 1
-        if self._read_count >= self._buffer_size:
+        if (self._read_count == self._buffer_size) or (self._read_count >= len(self._buffer)):
             self.get_new_buffer()
-        return self._buffer[(idx%self._buffer_size)]
+        return self._buffer[self._read_count%self._buffer_size]
 
 def build(image_set, args):
     root = Path(args.coco_path)
