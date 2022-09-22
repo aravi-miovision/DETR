@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES="" python3 main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
